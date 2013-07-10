@@ -13,7 +13,10 @@
 
 (defn log-map [m]
   (let [d (assoc m :timestamp (.getTime (js/Date.)))]
-    (.log js/console (pr-str d))))
+    (.log js/console (pr-str d))
+    (.groupCollapsed js/console)
+    (.trace js/console)
+    (.groupEnd js/console)))
 
 (defn log [& args]
   (log-map (apply hash-map args)))
