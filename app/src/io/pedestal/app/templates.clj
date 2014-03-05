@@ -279,7 +279,12 @@ starting with file, to an arbitrary level of nesting."
          ts-syms (reduce (fn [m x]
                            (assoc m
                                   (-> x :attrs :field)
-                                  (symbol (or (-> x :attrs :id) (gensym)))))
+                                  (symbol (or (-> x :attrs :id)
+                                              (if-let [static-id (second (first (filter (every-pred #(= "id" (first %))
+                                                                                                    #(contains? (set static-fields) (keyword (second %))))
+                                                                                        (field-pairs (-> x :attrs :field)))))]
+                                                (with-meta (symbol static-id) {:static-id true}))
+                                              (gensym)))))
                          {}
                          field-nodes)
          changes (-> ts
@@ -291,12 +296,13 @@ starting with file, to an arbitrary level of nesting."
                        nodes
                        changes)
          changes (simplify-info-maps changes)
-         ids (set (mapcat (fn [[_ field-infos]] (map :id field-infos))
-                          changes))]
+         ids (mapcat (fn [[_ field-infos]] (map :id field-infos))
+                     changes)]
      (list 'fn [] (list 'let (vec (interleave ids (map str ids)))
                         [changes (list 'fn [map-sym]
                                        (list (tfn nodes)
-                                             (let [id-map (interleave (map keyword ids) ids)]
+                                             (let [generated-ids (remove #(:static-id (meta %)) ids)
+                                                   id-map (interleave (map keyword generated-ids) generated-ids)]
                                                (if (seq id-map)
                                                  (concat ['assoc map-sym] id-map)
                                                  map-sym))))])))))

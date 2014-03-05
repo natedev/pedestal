@@ -62,10 +62,10 @@
   (let [[template html] (make-template)]
     (render/set-data! r (conj path ::template) template)
     (fn [data]
-      (doseq [[k v] data]
-        (let [info (get template k)]
-          (when (some (comp (partial = "id") :attr-name) info)
-            (render/set-data! r
-                              (conj path ::template)
-                              (assoc template k (mapv #(assoc % :id v) info))))))
+      (doseq [[k v] data [template-key field-maps] template]
+        (doseq [[idx field-map] (partition 2 (interleave (iterate inc 0) field-maps))]
+         (when (and (= (name k) (name (:id field-map))))
+           (render/set-data! r
+                             (conj path ::template)
+                             (assoc-in template [template-key idx :id] v)))))
       (html data))))

@@ -32,8 +32,8 @@
         "builds change index map out of one normal and two overlapping (same data-field) single fields")))
 
 (def dtfn-test-nodes
-  (enlive/html-snippet "<li template='todo' field='id:line-item-id,accesskey:access-key'>
-                          <div id='completed_123' field='class:completed'>
+    (enlive/html-snippet "<li template='todo' field='id:line-item-id,accesskey:access-key'>
+                           <div id='completed_123' field='class:completed'>
                             <div class='view'>
                               <input class='toggle' type='checkbox' checked>
                               <label field='content:text'>Create a TodoMVC template</label>
@@ -59,7 +59,7 @@
 
 (deftest test-dtfn
   (let [[dynamic-attributes html-fn] ((template-macro))
-        values {:text "This is text", :completed "incomplete", :id "todo-1"}
+        values {:text "This is text", :completed "incomplete", :id "todo-1" :line-item-id "mycustomid"}
         result-html (html-fn values)
         result-nodes  (enlive/html-snippet result-html)]
     (is (= #{:id :completed :text :access-key} (set (keys dynamic-attributes))))
@@ -75,6 +75,8 @@
     (is (= 1 (count (:completed dynamic-attributes))))
     (is (= 2 (count (:text dynamic-attributes))))
     (is (= 1 (count (:access-key dynamic-attributes))))
+    (is (= "line-item-id" (-> dynamic-attributes :access-key first :id))
+        "The :id for a dynamic attribute info map on a node whose template also contained an id field pair should be the id attribute key")
     (is (let [info-map (-> dynamic-attributes :id first)]
           (and (= (:attr-name info-map) "class")
                (= (:type info-map) :attr))))
@@ -97,6 +99,11 @@
     (is (->> (enlive/select result-nodes [:label])
              (some #(= (:content %) ["This is text"])))
         "there is a label with content 'This is text'")
+    (is (= "mycustomid" (->> (enlive/select result-nodes [:li])
+                             first
+                             :attrs
+                             :id))
+        "a static id can be set on a node containing dynamic fields")
     (is (= 1 (count (enlive/select result-nodes [(enlive/attr= :value "This is text")])))
         "there is one input with value 'This is text'")))
 
